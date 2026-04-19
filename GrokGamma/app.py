@@ -2,12 +2,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from polygon import RESTClient
+from polygon.exceptions import BadResponse
 from datetime import datetime
 import plotly.graph_objects as go
 
 st.set_page_config(page_title="GrokGamma", layout="wide", page_icon="🚀")
 st.title("🚀 GrokGamma — Institutional Spot Gamma Dashboard")
-st.caption("Real-time GEX • Call Wall • Put Wall • Gamma Flip • Dealer Positioning | Powered by Grok + Polygon.io")
+st.caption("Real-time GEX • Call Wall • Put Wall • Gamma Flip | Powered by Grok + Polygon.io")
 
 # ====================== SIDEBAR ======================
 st.sidebar.header("⚙️ Controls")
@@ -15,14 +16,16 @@ st.sidebar.header("⚙️ Controls")
 # API Key
 if "polygon" in st.secrets:
     api_key = st.secrets["polygon"]["api_key"]
-    st.sidebar.success("✅ API key loaded securely")
+    st.sidebar.success("✅ API key loaded securely from secrets")
 else:
     api_key = st.sidebar.text_input("Polygon API Key", type="password", 
-                                    help="Get free key at polygon.io → paste here")
+                                    help="Get free key at polygon.io → paste here (or add to secrets.toml)")
 
-underlying = st.sidebar.text_input("Ticker (SPX, SPY, AAPL, etc.)", value="SPX")
+underlying = st.sidebar.text_input("Ticker", value="SPY")  # ← changed default to SPY
 max_dte = st.sidebar.slider("Max Days to Expiration", 1, 90, 45)
 refresh_btn = st.sidebar.button("🔄 Refresh Live Data", type="primary", use_container_width=True)
+
+st.sidebar.info("💡 Free tier works great with **SPY**. SPX usually requires a paid plan.")
 
 # ====================== CORE TOOL ======================
 @st.cache_data(ttl=300)
@@ -77,14 +80,29 @@ def compute_profile(df):
 if refresh_btn or st.session_state.get("first_run", True):
     st.session_state.first_run = False
     if not api_key:
-        st.error("Please enter your Polygon API key in the sidebar")
+        st.error("Please enter your Polygon API key in the sidebar or add it to .streamlit/secrets.toml")
         st.stop()
     
-    with st.spinner(f"Fetching {underlying} options chain... (10–30s for SPX)"):
-        df, spot = fetch_gammas(underlying, max_dte, api_key)
+    with st.spinner(f"Fetching {underlying} options chain... (usually 5–15s for SPY)"):
+        try:
+            df, spot = fetch_gammas(underlying, max_dte, api_key)
+        except BadResponse as e:
+            st.error(f"""
+🚨 **Polygon API Error**  
+{str(e)}
+
+**Most common fixes:**
+- Make sure your API key is correct (free keys work with SPY)
+- SPX usually requires a paid plan ($29/mo “Options Starter”)
+- Try **SPY** instead of SPX
+            """)
+            st.stop()
+        except Exception as e:
+            st.error(f"Unexpected error: {str(e)}")
+            st.stop()
     
     if df.empty:
-        st.error("No data returned. Try SPY instead of SPX or check your API key.")
+        st.error("No data returned. Try a different ticker or check your API key.")
         st.stop()
     
     profile, net_gex, call_wall, put_wall, gamma_flip = compute_profile(df)
