@@ -1,6 +1,3 @@
-Python 3.14.3 (tags/v3.14.3:323c59a, Feb  3 2026, 16:04:56) [MSC v.1944 64 bit (AMD64)] on win32
-Type "help", "copyright", "credits" or "license" for more information.
->>> Traceback (most recent call last):
   File "C:\Users\jared\AppData\Local\Python\pythoncore-3.14-64\Lib\_pyrepl\readline.py", line 395, in multiline_input
     return reader.readline()
            ~~~~~~~~~~~~~~~^^
@@ -34,3 +31,4 @@ Type "help", "copyright", "credits" or "license" for more information.
                 ^^
 UnicodeEncodeError: 'utf-8' codec can't encode characters in position 69-70: surrogates not allowed
 >>>
+
